@@ -6,16 +6,16 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Lab_2.Models;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Lab_2.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly ILogger<HomeController> _logger;
-
-        public HomeController(ILogger<HomeController> logger)
+        private readonly ComputerDbContext computerDb;
+        public HomeController(ComputerDbContext computerDb)
         {
-            _logger = logger;
+            this.computerDb = computerDb;
         }
 
         public IActionResult Index()
@@ -23,15 +23,46 @@ namespace Lab_2.Controllers
             return View();
         }
 
-        public IActionResult Privacy()
+        public IActionResult Computers()
         {
+            List<Computer> computers = computerDb.Computers.ToList();
+            return View(computers);
+        }
+
+        [HttpGet]
+        public IActionResult Add()
+        {
+            List<SelectListItem> sli = new List<SelectListItem>();
+
+            var enumNames =  typeof(Models.Computer.ComputerType).GetEnumNames();
+            for(int i = 0; i < enumNames.Length; i++)
+            {
+                sli.Add(new SelectListItem(enumNames[i], i.ToString()));
+            }
+
+            ViewBag.Types = sli;
             return View();
         }
 
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
+        [HttpPost]
+        public IActionResult Add(AddViewModel addvm)
         {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+            if (ModelState.IsValid)
+            {
+                Computer computer = new Computer
+                {
+                    Name = addvm.Name,
+                    Type = addvm.Type,
+                    Count = addvm.Count,
+                    Value = addvm.Value,
+                    Description = addvm.Description
+                };
+                computerDb.Computers.Add(computer);
+                computerDb.SaveChanges();
+                return RedirectToAction("Computers");
+            }
+            ModelState.AddModelError("", "Adding Error");
+            return RedirectToAction("Add");
         }
     }
 }
